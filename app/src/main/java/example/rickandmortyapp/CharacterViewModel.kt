@@ -21,12 +21,15 @@ class CharacterViewModel : ViewModel() {
     }
 
     fun loadCharacters(
-        page: Int = 1,
+        page: Int = currentPage,
         name: String? = null,
         status: String? = null,
         species: String? = null,
         gender: String? = null
     ) {
+        if (isLoading || endReached) return
+
+        isLoading = true
         viewModelScope.launch {
             try {
                 val response = RetrofitInstance.api.getCharacters(
@@ -36,9 +39,17 @@ class CharacterViewModel : ViewModel() {
                     species = species,
                     gender = gender
                 )
-                _characters.value = response.results
+
+                if (response.results.isEmpty()) {
+                    endReached = true
+                } else {
+                    _characters.value = _characters.value + response.results
+                    currentPage++
+                }
             } catch (e: Exception) {
                 e.printStackTrace()
+            } finally {
+                isLoading = false
             }
         }
     }
@@ -50,34 +61,21 @@ class CharacterViewModel : ViewModel() {
     }
 
     fun searchCharacters(name: String) {
-        viewModelScope.launch {
-            try {
-                val response = RetrofitInstance.api.getCharacters(name = name)
-                _characters.value = response.results
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-        }
+        resetPagination()
+        loadCharacters(name = name)
     }
 
     fun applyFilters(filter: CharacterFilter) {
         currentFilter = filter
-        currentPage = 1
-        endReached = false
-        _characters.value = emptyList()
-        loadCharacters()
+        resetPagination()
+        loadCharacters(
+            //name = filter.name,
+            status = filter.status,
+            species = filter.species,
+            gender = filter.gender
+        )
     }
 
-    suspend fun loadCharacterDetail(id: Int): RickMortyCharacter? {
-        return try {
-            RetrofitInstance.api.getCharacterDetail(id)
-        } catch (e: Exception) {
-            e.printStackTrace()
-            null
-        }
-    }
-
-    fun clearSearch() {
-        loadCharacters()
-    }
+    fun getCurrentPage(): Int = currentPage
+    fun isLoading(): Boolean = isLoading
 }

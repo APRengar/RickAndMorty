@@ -8,6 +8,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
@@ -16,81 +17,104 @@ import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
 import example.rickandmortyapp.ui.components.DropdownField
 import example.rickandmortyapp.ui.components.FilterBar
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CharacterListScreen(
-    navController: NavController,
-    viewModel: CharacterViewModel = viewModel()
-) {
+fun CharacterListScreen(navController: NavController, viewModel: CharacterViewModel = viewModel()) {
     val characters by viewModel.characters.collectAsState()
+    val gridState = rememberLazyGridState()
 
     var searchQuery by remember { mutableStateOf("") }
+    var searchActive by remember { mutableStateOf(false) }
 
     var selectedStatus by remember { mutableStateOf("") }
     var selectedSpecies by remember { mutableStateOf("") }
     var selectedGender by remember { mutableStateOf("") }
 
+    // Паджинация при скролле вниз
+    LaunchedEffect(gridState) {
+        snapshotFlow { gridState.layoutInfo }
+            .map { it.visibleItemsInfo }
+            .distinctUntilChanged()
+            .collectLatest { visibleItems ->
+                val lastVisible = visibleItems.lastOrNull()?.index ?: 0
+                val total = characters.size
+                if (lastVisible >= total - 4) {
+                    viewModel.loadCharacters(
+                        page = viewModel.getCurrentPage(),
+                        name = searchQuery.ifBlank { null },
+                        status = selectedStatus.ifBlank { null },
+                        species = selectedSpecies.ifBlank { null },
+                        gender = selectedGender.ifBlank { null }
+                    )
+                }
+            }
+    }
+
     Column {
-        // 🔍 Поиск
         SearchBar(
-            inputField = {
-                OutlinedTextField(
-                    value = searchQuery,
-                    onValueChange = {
-                        searchQuery = it
-                        viewModel.loadCharacters(
-                            name = it,
-                            status = selectedStatus.takeIf { it.isNotEmpty() },
-                            species = selectedSpecies.takeIf { it.isNotEmpty() },
-                            gender = selectedGender.takeIf { it.isNotEmpty() }
-                        )
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    label = { Text("Search characters...") },
-                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) }
-                )
+            query = searchQuery,
+            onQueryChange = { searchQuery = it },
+            onSearch = {
+                viewModel.searchCharacters(searchQuery)
+                searchActive = false
             },
-            expanded = false,
-            onExpandedChange = {}
+            active = searchActive,
+            onActiveChange = { searchActive = it },
+            placeholder = { Text("Search characters...") },
+            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(8.dp)
         ) {}
 
-        // 🎛 Фильтры
         FilterBar(
             selectedStatus = selectedStatus,
             onStatusChange = {
                 selectedStatus = it
-                viewModel.loadCharacters(
-                    name = searchQuery.takeIf { it.isNotEmpty() },
-                    status = it.takeIf { it.isNotEmpty() },
-                    species = selectedSpecies.takeIf { it.isNotEmpty() },
-                    gender = selectedGender.takeIf { it.isNotEmpty() }
+                viewModel.applyFilters(
+                    CharacterFilter(
+                        //name = searchQuery,
+                        status = selectedStatus,
+                        species = selectedSpecies,
+                        gender = selectedGender
+                    )
                 )
             },
             selectedSpecies = selectedSpecies,
             onSpeciesChange = {
                 selectedSpecies = it
-                viewModel.loadCharacters(
-                    name = searchQuery.takeIf { it.isNotEmpty() },
-                    status = selectedStatus.takeIf { it.isNotEmpty() },
-                    species = it.takeIf { it.isNotEmpty() },
-                    gender = selectedGender.takeIf { it.isNotEmpty() }
+                viewModel.applyFilters(
+                    CharacterFilter(
+                        //name = searchQuery,
+                        status = selectedStatus,
+                        species = selectedSpecies,
+                        gender = selectedGender
+                    )
                 )
             },
             selectedGender = selectedGender,
             onGenderChange = {
                 selectedGender = it
-                viewModel.loadCharacters(
-                    name = searchQuery.takeIf { it.isNotEmpty() },
-                    status = selectedStatus.takeIf { it.isNotEmpty() },
-                    species = selectedSpecies.takeIf { it.isNotEmpty() },
-                    gender = it.takeIf { it.isNotEmpty() }
+                viewModel.applyFilters(
+                    CharacterFilter(
+                        //name = searchQuery,
+                        status = selectedStatus,
+                        species = selectedSpecies,
+                        gender = selectedGender
+                    )
                 )
             }
         )
 
-        // 📦 Список персонажей
-        LazyVerticalGrid(columns = GridCells.Fixed(2), contentPadding = PaddingValues(8.dp)) {
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(2),
+            state = gridState,
+            contentPadding = PaddingValues(8.dp)
+        ) {
             items(characters) { character ->
                 Card(
                     modifier = Modifier
@@ -116,6 +140,16 @@ fun CharacterListScreen(
                             style = MaterialTheme.typography.bodySmall
                         )
                     }
+                }
+            }
+
+            item(span = { GridItemSpan(2) }) {
+                if (viewModel.isLoading()) {
+                    CircularProgressIndicator(
+                        modifier = Modifier
+                            .padding(16.dp)
+                            .align(Alignment.CenterHorizontally)
+                    )
                 }
             }
         }
