@@ -1,91 +1,95 @@
 package example.rickandmortyapp
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import coil.compose.rememberAsyncImagePainter
-import androidx.compose.foundation.clickable
 import androidx.navigation.NavController
-import androidx.compose.material3.SearchBar
-import androidx.compose.material3.Text
-import androidx.compose.material3.Icon
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.padding
+import coil.compose.rememberAsyncImagePainter
 import example.rickandmortyapp.ui.components.DropdownField
+import example.rickandmortyapp.ui.components.FilterBar
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CharacterListScreen(navController: NavController, viewModel: CharacterViewModel = viewModel()) {
+fun CharacterListScreen(
+    navController: NavController,
+    viewModel: CharacterViewModel = viewModel()
+) {
     val characters by viewModel.characters.collectAsState()
 
     var searchQuery by remember { mutableStateOf("") }
-    var searchActive by remember { mutableStateOf(false) }
 
     var selectedStatus by remember { mutableStateOf("") }
     var selectedSpecies by remember { mutableStateOf("") }
     var selectedGender by remember { mutableStateOf("") }
 
     Column {
-        // 🔍 Поиск и фильтры
+        // 🔍 Поиск
         SearchBar(
-            query = searchQuery,
-            onQueryChange = {
-                searchQuery = it
-                viewModel.searchCharacters(it) // Обновить список по поиску
-            },
-            onSearch = {
-                viewModel.searchCharacters(searchQuery)
-                searchActive = false
-            },
-            active = searchActive,
-            onActiveChange = { searchActive = it },
-            placeholder = { Text("Search characters...") },
-            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(8.dp)
-        ) {
-            // Пока ничего не выводим внутри
-        }
-        @Composable
-        fun FilterBar(
-            selectedStatus: String,
-            onStatusChange: (String) -> Unit,
-            selectedSpecies: String,
-            onSpeciesChange: (String) -> Unit,
-            selectedGender: String,
-            onGenderChange: (String) -> Unit
-        ) {
-            Column(modifier = Modifier.padding(8.dp)) {
-                DropdownField(
-                    label = "Status",
-                    options = listOf("Alive", "Dead", "unknown"),
-                    selectedOption = selectedStatus,
-                    onOptionSelected = onStatusChange
+            inputField = {
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = {
+                        searchQuery = it
+                        viewModel.loadCharacters(
+                            name = it,
+                            status = selectedStatus.takeIf { it.isNotEmpty() },
+                            species = selectedSpecies.takeIf { it.isNotEmpty() },
+                            gender = selectedGender.takeIf { it.isNotEmpty() }
+                        )
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Search characters...") },
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) }
                 )
-                DropdownField(
-                    label = "Species",
-                    options = listOf("Human", "Alien", "Robot", "Animal", "Mythological", "unknown"),
-                    selectedOption = selectedSpecies,
-                    onOptionSelected = onSpeciesChange
+            },
+            expanded = false,
+            onExpandedChange = {}
+        ) {}
+
+        // 🎛 Фильтры
+        FilterBar(
+            selectedStatus = selectedStatus,
+            onStatusChange = {
+                selectedStatus = it
+                viewModel.loadCharacters(
+                    name = searchQuery.takeIf { it.isNotEmpty() },
+                    status = it.takeIf { it.isNotEmpty() },
+                    species = selectedSpecies.takeIf { it.isNotEmpty() },
+                    gender = selectedGender.takeIf { it.isNotEmpty() }
                 )
-                DropdownField(
-                    label = "Gender",
-                    options = listOf("Male", "Female", "Genderless", "unknown"),
-                    selectedOption = selectedGender,
-                    onOptionSelected = onGenderChange
+            },
+            selectedSpecies = selectedSpecies,
+            onSpeciesChange = {
+                selectedSpecies = it
+                viewModel.loadCharacters(
+                    name = searchQuery.takeIf { it.isNotEmpty() },
+                    status = selectedStatus.takeIf { it.isNotEmpty() },
+                    species = it.takeIf { it.isNotEmpty() },
+                    gender = selectedGender.takeIf { it.isNotEmpty() }
+                )
+            },
+            selectedGender = selectedGender,
+            onGenderChange = {
+                selectedGender = it
+                viewModel.loadCharacters(
+                    name = searchQuery.takeIf { it.isNotEmpty() },
+                    status = selectedStatus.takeIf { it.isNotEmpty() },
+                    species = selectedSpecies.takeIf { it.isNotEmpty() },
+                    gender = it.takeIf { it.isNotEmpty() }
                 )
             }
-        }
+        )
 
+        // 📦 Список персонажей
         LazyVerticalGrid(columns = GridCells.Fixed(2), contentPadding = PaddingValues(8.dp)) {
             items(characters) { character ->
                 Card(
@@ -114,32 +118,6 @@ fun CharacterListScreen(navController: NavController, viewModel: CharacterViewMo
                     }
                 }
             }
-        }
-    }
-}
-
-@Composable
-fun CharacterCard(character: RickMortyCharacter) {
-    Card(
-        modifier = Modifier
-            .padding(8.dp)
-            .fillMaxWidth()
-    ) {
-        Column(modifier = Modifier.padding(8.dp)) {
-            Image(
-                painter = rememberAsyncImagePainter(character.image),
-                contentDescription = character.name,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(180.dp)
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(text = character.name, style = MaterialTheme.typography.titleMedium)
-            Text(
-                text = "${character.species}, ${character.status}, ${character.gender}",
-                style = MaterialTheme.typography.bodySmall
-            )
         }
     }
 }

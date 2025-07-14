@@ -34,15 +34,21 @@ fun CharacterDetailScreen(characterId: Int, navController: NavController) {
             )
         }
     ) { padding ->
-        Box(modifier = Modifier
-            .fillMaxSize()
-            .padding(padding)) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+        ) {
             if (character == null) {
                 CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
             } else {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(text = character!!.name, style = MaterialTheme.typography.headlineMedium)
-                    // другие поля персонажа...
+                    character?.let {
+                        Text("Status: ${it.status}")
+                        Text("Species: ${it.species}")
+                        Text("Gender: ${it.gender}")
+                    }
                 }
             }
         }

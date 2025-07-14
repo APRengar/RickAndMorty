@@ -4,13 +4,11 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import example.rickandmortyapp.ui.CharacterDetailScreen
+import example.rickandmortyapp.ui.Navigation.Screen
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -19,11 +17,11 @@ class MainActivity : ComponentActivity() {
             MaterialTheme {
                 val navController = rememberNavController()
 
-                NavHost(navController = navController, startDestination = "list") {
-                    composable("list") {
+                NavHost(navController = navController, startDestination = Screen.CharacterList.route) {
+                    composable(route = Screen.CharacterList.route) {
                         CharacterListScreen(navController)
                     }
-                    composable("detail/{characterId}") { backStackEntry ->
+                    composable(route = Screen.CharacterDetail.route) { backStackEntry ->
                         val characterId = backStackEntry.arguments?.getString("characterId")?.toIntOrNull()
                         characterId?.let {
                             CharacterDetailScreen(characterId, navController)
@@ -32,18 +30,5 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
-    }
-}
-
-@Composable
-fun Greeting(name: String) {
-    Text(text = "Hello $name!")
-}
-
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    MaterialTheme {
-        Greeting("Android")
     }
 }

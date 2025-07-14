@@ -76,4 +76,8 @@ class CharacterViewModel : ViewModel() {
             null
         }
     }
+
+    fun clearSearch() {
+        loadCharacters()
+    }
 }
