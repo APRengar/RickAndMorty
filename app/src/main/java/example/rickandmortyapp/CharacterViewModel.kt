@@ -118,15 +118,28 @@ class CharacterViewModel(application: Application) : AndroidViewModel(applicatio
                     dao.insertAll(entities)
                     _characters.value = response.results
                 } catch (e: Exception) {
-                    e.printStackTrace()
-                    val cached = dao.getAllCharacters()
-                    _characters.value = cached.map { it.toDomain() }
+                    loadFromCache(name, status, species, gender)
                 }
             } else {
-                val cached = dao.getAllCharacters()
-                _characters.value = cached.map { it.toDomain() }
+                loadFromCache(name, status, species, gender)
             }
         }
+    }
+
+    private suspend fun loadFromCache(
+        name: String?,
+        status: String?,
+        species: String?,
+        gender: String?
+    ) {
+        val cached = when {
+            !name.isNullOrBlank() -> dao.searchByName(name)
+            status != null || species != null || gender != null ->
+                dao.filterCharacters(status, species, gender)
+            else -> dao.getAllCharacters()
+        }
+
+        _characters.value = cached.map { it.toDomain() }
     }
 
     fun resetPagination() {
