@@ -1,5 +1,7 @@
 package example.rickandmortyapp
 
+import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.GET
 import retrofit2.http.Path
 import retrofit2.http.Query
@@ -16,4 +18,14 @@ interface RickAndMortyApi {
 
     @GET("character/{id}")
     suspend fun getCharacterDetail(@Path("id") id: Int): RickMortyCharacter
+    companion object {
+        fun create(): RickAndMortyApi {
+            val retrofit = Retrofit.Builder()
+                .baseUrl("https://rickandmortyapi.com/api/")
+                .addConverterFactory(GsonConverterFactory.create())
+                .build()
+
+            return retrofit.create(RickAndMortyApi::class.java)
+        }
+    }
 }
