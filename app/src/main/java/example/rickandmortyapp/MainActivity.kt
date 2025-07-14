@@ -8,7 +8,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import example.rickandmortyapp.ui.CharacterDetailScreen
-import example.rickandmortyapp.ui.Navigation.Screen
+import example.rickandmortyapp.ui.navigation.Screen
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -17,14 +17,18 @@ class MainActivity : ComponentActivity() {
             MaterialTheme {
                 val navController = rememberNavController()
 
-                NavHost(navController = navController, startDestination = Screen.CharacterList.route) {
-                    composable(route = Screen.CharacterList.route) {
+                NavHost(
+                    navController = navController,
+                    startDestination = Screen.CharacterList.route
+                ) {
+                    composable(Screen.CharacterList.route) {
                         CharacterListScreen(navController)
                     }
-                    composable(route = Screen.CharacterDetail.route) { backStackEntry ->
-                        val characterId = backStackEntry.arguments?.getString("characterId")?.toIntOrNull()
+                    composable(Screen.CharacterDetail.route) { backStackEntry ->
+                        val characterId =
+                            backStackEntry.arguments?.getString("characterId")?.toIntOrNull()
                         characterId?.let {
-                            CharacterDetailScreen(characterId, navController)
+                            CharacterDetailScreen(it, navController)
                         }
                     }
                 }

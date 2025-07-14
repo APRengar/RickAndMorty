@@ -20,6 +20,7 @@ import example.rickandmortyapp.ui.components.FilterBar
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
+import example.rickandmortyapp.ui.navigation.Screen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -121,7 +122,7 @@ fun CharacterListScreen(navController: NavController, viewModel: CharacterViewMo
                         .padding(8.dp)
                         .fillMaxWidth()
                         .clickable {
-                            navController.navigate("detail/${character.id}")
+                            navController.navigate(Screen.CharacterDetail.createRoute(character.id))
                         }
                 ) {
                     Column(modifier = Modifier.padding(8.dp)) {
