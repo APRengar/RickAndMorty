@@ -1,6 +1,5 @@
 package example.rickandmortyapp
 
-import example.rickandmortyapp.CharacterViewModel
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.*
@@ -13,7 +12,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.rememberAsyncImagePainter
 import androidx.compose.foundation.clickable
 import androidx.navigation.NavController
-import example.rickandmortyapp.ui.components.FilterBar
 import androidx.compose.material3.SearchBar
 import androidx.compose.material3.Text
 import androidx.compose.material3.Icon
@@ -21,7 +19,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
-import androidx.compose.ui.unit.dp
 import example.rickandmortyapp.ui.components.DropdownField
 
 @OptIn(ExperimentalMaterial3Api::class)
