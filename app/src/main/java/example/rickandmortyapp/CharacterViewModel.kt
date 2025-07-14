@@ -1,12 +1,24 @@
 package example.rickandmortyapp
 
-import androidx.lifecycle.ViewModel
+import android.Manifest
+import android.app.Application
+import android.content.Context
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
+import androidx.annotation.RequiresPermission
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import example.rickandmortyapp.data.AppDatabase
+import example.rickandmortyapp.data.local.toEntity
+import example.rickandmortyapp.data.local.toDomain
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-class CharacterViewModel : ViewModel() {
+class CharacterViewModel(application: Application) : AndroidViewModel(application) {
+    private val dao = AppDatabase.getDatabase(application).characterDao()
+    private val context = application.applicationContext
+
     private val _characters = MutableStateFlow<List<RickMortyCharacter>>(emptyList())
     val characters = _characters.asStateFlow()
 
@@ -17,39 +29,72 @@ class CharacterViewModel : ViewModel() {
     private var currentFilter = CharacterFilter()
 
     init {
-        loadCharacters()
+        loadCharactersSafely()
+    }
+
+    @RequiresPermission(Manifest.permission.ACCESS_NETWORK_STATE)
+    private fun isNetworkAvailable(): Boolean {
+        val connectivityManager =
+            context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val network = connectivityManager.activeNetwork ?: return false
+        val capabilities = connectivityManager.getNetworkCapabilities(network) ?: return false
+        return capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+    }
+
+    private fun loadCharactersSafely() {
+        viewModelScope.launch {
+            if (isNetworkAvailable()) {
+                try {
+                    val response = RetrofitInstance.api.getCharacters()
+                    val entities = response.results.map { it.toEntity() }
+                    dao.insertAll(entities)
+                    _characters.value = response.results
+                } catch (e: Exception) {
+                    val cached = dao.getAllCharacters()
+                    _characters.value = cached.map { it.toDomain() }
+                }
+            } else {
+                val cached = dao.getAllCharacters()
+                _characters.value = cached.map { it.toDomain() }
+            }
+        }
+    }
+
+    fun loadCharactersFromDb() {
+        viewModelScope.launch {
+            val cached = dao.getAllCharacters()
+            _characters.value = cached.map { it.toDomain() }
+        }
     }
 
     fun loadCharacters(
-        page: Int = currentPage,
+        page: Int = 1,
         name: String? = null,
         status: String? = null,
         species: String? = null,
         gender: String? = null
     ) {
-        if (isLoading || endReached) return
-
-        isLoading = true
         viewModelScope.launch {
-            try {
-                val response = RetrofitInstance.api.getCharacters(
-                    page = page,
-                    name = name,
-                    status = status,
-                    species = species,
-                    gender = gender
-                )
-
-                if (response.results.isEmpty()) {
-                    endReached = true
-                } else {
-                    _characters.value = _characters.value + response.results
-                    currentPage++
+            if (isNetworkAvailable()) {
+                try {
+                    val response = RetrofitInstance.api.getCharacters(
+                        page = page,
+                        name = name,
+                        status = status,
+                        species = species,
+                        gender = gender
+                    )
+                    val entities = response.results.map { it.toEntity() }
+                    dao.insertAll(entities)
+                    _characters.value = response.results
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    val cached = dao.getAllCharacters()
+                    _characters.value = cached.map { it.toDomain() }
                 }
-            } catch (e: Exception) {
-                e.printStackTrace()
-            } finally {
-                isLoading = false
+            } else {
+                val cached = dao.getAllCharacters()
+                _characters.value = cached.map { it.toDomain() }
             }
         }
     }
@@ -69,7 +114,6 @@ class CharacterViewModel : ViewModel() {
         currentFilter = filter
         resetPagination()
         loadCharacters(
-            //name = filter.name,
             status = filter.status,
             species = filter.species,
             gender = filter.gender
